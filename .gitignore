@@ -1,0 +1,5 @@
+midi_files/
+.ipynb_checkpoints/
+__pycache__
+trainer/
+music-gpt2-2.0/

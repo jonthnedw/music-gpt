@@ -271,7 +271,11 @@ class Instrument:
 
 class Song:
     def __init__(
-        self, path: str = None, string: str = None, string_list: List[str] = None
+        self,
+        path: str = None,
+        string: str = None,
+        string_list: List[str] = None,
+        transpose: int = None,
     ) -> None:
         self.name: str = None
         self.parts: List[Instrument] = None
@@ -283,6 +287,9 @@ class Song:
             if path.endswith(".mid"):
                 stream = m21parse(path)
                 parts = stream.parts.stream()
+
+                if transpose:
+                    parts = parts.transpose(transpose)
 
                 self.time_signature = (
                     stream.flat.timeSignature.numerator,
