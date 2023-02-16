@@ -3,3 +3,5 @@ midi_files/
 __pycache__
 trainer/
 music-gpt2-2.0/
+music-gpt*
+.DS_Store

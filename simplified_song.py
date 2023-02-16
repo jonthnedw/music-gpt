@@ -1,7 +1,8 @@
 from fractions import Fraction
 from random import randint
+import traceback
 
-from typing import List, Union
+from typing import List, Union, Tuple
 from music21.stream import Measure as m21Measure
 from music21.note import Note as m21Note
 from music21.chord import Chord as m21Chord
@@ -81,6 +82,19 @@ class Note:
 
     def __str__(self) -> str:
         return self.as_string()
+
+    def is_valid(string_list: List[str]) -> bool:
+        if len(string_list) != 4:
+            return False
+        if not 2 <= len(string_list[0]) <= 3:
+            return False
+        try:
+            float(string_list[1])
+            float(string_list[2])
+            int(string_list[3])
+        except:
+            return False
+        return True
 
 
 class Chord:
@@ -204,6 +218,24 @@ class Measure:
 
 # Instrument containing a sequence of notes and chords
 class Instrument:
+    def sanitize(s: str) -> Tuple[List[str], int]:
+        string_list = s.split(" ")
+        return_list = []
+
+        ptr = 0
+        last_note = 0
+        while ptr < len(string_list):
+            if "/" in string_list[ptr]:
+                return_list.append(string_list[ptr])
+                ptr += 1
+            if Note.is_valid(string_list[ptr : ptr + 4]):
+                last_note = ptr
+                return_list += string_list[ptr : ptr + 4]
+                ptr += 4
+            else:
+                return return_list, last_note
+        return return_list, last_note
+
     def __init__(
         self, stream: m21Part = None, string: str = None, string_list: List[str] = None
     ) -> None:
@@ -284,44 +316,49 @@ class Song:
         self.parsed = False
 
         try:
-            if path.endswith(".mid"):
-                stream = m21parse(path)
-                parts = stream.parts.stream()
+            if path:
+                if path.endswith(".mid"):
+                    stream = m21parse(path)
+                    parts = stream.parts.stream()
 
-                if transpose:
-                    parts = parts.transpose(transpose)
+                    if transpose:
+                        parts = parts.transpose(transpose)
 
-                self.time_signature = (
-                    stream.flat.timeSignature.numerator,
-                    stream.flat.timeSignature.denominator,
-                )
-                self.name = path[(-(path[::-1].find("/"))) : -4]
-                self.parts = [Instrument(part, self.time_signature) for part in parts]
-                self.parsed = True
-                self.num_notes = sum([i.num_notes for i in self.parts])
-                print(
-                    f"Loaded Song: {self.name} with {len(parts)} parts and {self.num_notes} notes."
-                )
-            elif path.endswith(".txt"):
-                with open(path, "r") as f:
-                    lines = f.readlines()
-                    self.parts = [Instrument(string=" ".join(lines))]
-                    self.num_notes = self.parts[0].num_notes
-                    self.name = path[(-(path[::-1].find("/"))) : -4]
-                    self.parsed = True
-                    print(
-                        f"Loaded Song: {self.name} with {len(parts)} parts and {self.num_notes} notes."
+                    self.time_signature = (
+                        stream.flat.timeSignature.numerator,
+                        stream.flat.timeSignature.denominator,
                     )
+                    self.name = path[(-(path[::-1].find("/"))) : -4]
+                    self.parts = [
+                        Instrument(part, self.time_signature) for part in parts
+                    ]
+                    self.parsed = True
+                    self.num_notes = sum([i.num_notes for i in self.parts])
+                    print(
+                        f"Loaded Song: {self.name} with {len(self.parts)} parts and {self.num_notes} notes."
+                    )
+                elif path.endswith(".txt"):
+                    with open(path, "r") as f:
+                        lines = f.readlines()
+                        self.parts = [Instrument(string=" ".join(lines))]
+                        self.num_notes = self.parts[0].num_notes
+                        self.name = path[(-(path[::-1].find("/"))) : -4]
+                        self.parsed = True
+                        print(
+                            f"Loaded Song: {self.name} with {len(self.parts)} parts and {self.num_notes} notes."
+                        )
             elif string_list or string:
                 if string:
                     string_list = string.split(" ")
                 self.parts = [Instrument(string_list=string_list)]
                 self.num_notes = self.parts[0].num_notes
-                self.name = "song_" + str(randint(1, 9999))
+                self.name = "Song_" + str(randint(1, 9999))
                 self.parsed = True
+                print(f"Loaded Song from string with {self.parts[0].num_notes} notes.")
 
         except Exception as e:
             print(f"Failed to load song with path: {path}, exception: {e}.")
+            traceback.print_exc()
 
     def to_midi(self, path: str) -> None:
         score = Score()

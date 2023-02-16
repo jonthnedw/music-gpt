@@ -2,7 +2,7 @@ from simplified_song import Measure, Note, Chord
 from copy import deepcopy
 from random import randint
 
-JITTER_RANGE = 15
+JITTER_RANGE = 10
 
 
 def augment(m: Measure, augmentation) -> Measure:

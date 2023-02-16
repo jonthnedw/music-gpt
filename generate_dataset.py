@@ -5,7 +5,8 @@ from typing import List
 from glob import glob
 from random import shuffle, randint, choice
 
-MAX_SEQ = 128
+MAX_SEQ = 512
+MIN_SEQ = 256
 MAX_N_ROWS = 30000
 
 MIDI_FILES_PATH = "./midi_files"
@@ -50,12 +51,22 @@ def write_part(
     return n_notes, n_rows
 
 
+def should_break(n_rows: int, n_notes: int) -> bool:
+    if n_rows >= MAX_N_ROWS:
+        print(
+            f"Dataset generation complete. Total number of notes:{n_notes}, total rows: {n_rows}"
+        )
+        return True
+    return False
+
+
 def main():
     bach = list(glob(MIDI_FILES_PATH + "/Bach/*.mid", recursive=True))
     bach = [f for f in bach if "Bach, Johann Sebastian" in f]
     ghibli = list(glob(MIDI_FILES_PATH + "/ghibli_dataset/*.mid", recursive=True))
 
     file_names = ghibli + bach
+    shuffle(file_names)
 
     n_notes = 0
     n_rows = 0
@@ -66,18 +77,24 @@ def main():
             if song.parsed:
                 print(f"Song {i+1}/{len(file_names)}. Rows written: {n_rows}")
                 for part in song.parts:
-                    notes, rows = write_part(part.measures, f_ptr)
+                    if should_break(n_rows, n_notes):
+                        return
+                    notes, rows = write_part(
+                        part.measures, f_ptr, seq_len=randint(MIN_SEQ, MAX_SEQ)
+                    )
                     n_notes += notes
                     n_rows += rows
 
                     augmented = [
                         augment(m, choice(augmentation_list)) for m in part.measures
                     ]
-                    notes, rows = write_part(augmented, f_ptr)
+                    if should_break(n_rows, n_notes):
+                        return
+                    notes, rows = write_part(
+                        augmented, f_ptr, seq_len=randint(MIN_SEQ, MAX_SEQ)
+                    )
                     n_notes += notes
                     n_rows += rows
-            if n_rows > MAX_N_ROWS:
-                break
     print(
         f"Dataset generation complete. Total number of notes:{n_notes}, total rows: {n_rows}"
     )
